@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 
 const userSchema = new mongoose.Schema({
   email: {
@@ -40,7 +40,7 @@ userSchema.pre("save", async function (next) {
     return next();
   }
 
-// Hash the password
+  // Hash the password
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
@@ -56,6 +56,6 @@ userSchema.pre("save", async function (next) {
 // password - shivam@111204 -> $2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36T9QoeYyQ5v0tH8aLZy (hashed version stored in DB)
 userSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
-}
+};
 // The userSchema defines the structure of the User documents in the MongoDB collection. It includes fields for email, password, name, verification status, OTP, and OTP expiry. The schema also includes middleware to hash passwords before saving and a method to compare passwords during login.
 module.exports = mongoose.model("User", userSchema);
