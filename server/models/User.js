@@ -13,8 +13,9 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     minlength: 6,
+    select: false, // Do not return password by default in queries
   },
-  name: {
+  username: {
     type: String,
     required: true,
     trim: true,
@@ -22,9 +23,11 @@ const userSchema = new mongoose.Schema({
   isVerified: {
     type: Boolean,
     default: false,
+    select: false, // Do not return verification status by default in queries
   },
   otp: {
     type: String,
+    select: false, // Do not return OTP by default in queries
   },
   otpExpiry: {
     type: Date,
@@ -35,18 +38,17 @@ const userSchema = new mongoose.Schema({
 // This middleware runs before saving a user document. It checks if the password field has been modified (or is new) and hashes it using bcrypt. If the password hasn't been modified, it simply calls next() to proceed without hashing.
 //for example, if a user updates their email or name but not their password, the password won't be re-hashed unnecessarily.
 // password - shivam@111204 -> $2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36T9QoeYyQ5v0tH8aLZy (hashed version)
-userSchema.pre("save", async function (next) {
+userSchema.pre("save", async function () {
   if (!this.isModified("password")) {
-    return next();
+    return;
   }
 
   // Hash the password
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
-    next();
   } catch (error) {
-    next(error);
+    throw error;
   }
 });
 
