@@ -71,9 +71,36 @@ exports.registerUser = async (req, res) => {
 exports.login = async (req, res) => {
   return res.status(501).json({ message: "Login is not implemented yet" });
 };
-
 exports.verifyOtp = async (req, res) => {
-  return res
-    .status(501)
-    .json({ message: "OTP verification is not implemented yet" });
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      return res.status(400).json({ message: "Email and OTP are required" });
+    }
+    const user = await User.findOne({ email }).select(
+      "+otp +otpExpiry +isVerified",
+    );
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+    if (user.isVerified) {
+      return res.status(400).json({ message: "User is already verified" });
+    }
+    if (user.otp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+    if (user.otpExpiry < new Date()) {
+      return res.status(400).json({ message: "OTP has expired" });
+    }
+    user.isVerified = true;
+    user.otp = null;
+    user.otpExpiry = null;
+    await user.save();
+    res.status(200).json({ message: "OTP verified successfully" });
+  } catch (error) {
+    console.error("OTP verification error:", error);
+    res
+      .status(500)
+      .json({ message: "Error verifying OTP", error: error.message });
+  }
 };
