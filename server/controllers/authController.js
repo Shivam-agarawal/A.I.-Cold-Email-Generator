@@ -1,5 +1,14 @@
 const sendOtpEmail = require("../utils/sendOtpEmail.js");
 const User = require("../models/User");
+const jwt = require("jsonwebtoken");
+
+// Generate JWT Token
+//
+const generateToken = function (id) {
+  const token = jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+  return token;
+};
+
 // This code defines a controller function registerUser that handles user registration. It performs validation on the input data and creates a new user in the database if the input is valid. The function also includes error handling to return appropriate responses based on the success or failure of the registration process.
 exports.registerUser = async (req, res) => {
   try {
@@ -25,7 +34,7 @@ exports.registerUser = async (req, res) => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // OTP valid for 10 minutes
 
-    // Check if user already exists
+    // Create user
     const user = await User.create({
       username: username,
       email,
@@ -68,9 +77,7 @@ exports.registerUser = async (req, res) => {
   }
 };
 
-exports.login = async (req, res) => {
-  return res.status(501).json({ message: "Login is not implemented yet" });
-};
+// Verify OTP
 exports.verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -84,7 +91,8 @@ exports.verifyOtp = async (req, res) => {
       return res.status(400).json({ message: "User not found" });
     }
     if (user.isVerified) {
-      return res.status(400).json({ message: "User is already verified" });
+      const token = generateToken(user._id);
+      return res.status(200).json({ token, message: "User is already verified" });
     }
     if (user.otp !== otp) {
       return res.status(400).json({ message: "Invalid OTP" });
@@ -92,11 +100,15 @@ exports.verifyOtp = async (req, res) => {
     if (user.otpExpiry < new Date()) {
       return res.status(400).json({ message: "OTP has expired" });
     }
+
+    //
     user.isVerified = true;
     user.otp = null;
     user.otpExpiry = null;
     await user.save();
-    res.status(200).json({ message: "OTP verified successfully" });
+    //
+    const token = generateToken(user._id);
+    res.status(200).json({ token, message: "OTP verified successfully" });
   } catch (error) {
     console.error("OTP verification error:", error);
     res
@@ -104,3 +116,40 @@ exports.verifyOtp = async (req, res) => {
       .json({ message: "Error verifying OTP", error: error.message });
   }
 };
+
+// Login User
+exports.loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
+    const user = await User.findOne({ email }).select("+password +isVerified");
+    if (!user) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+    if (!user.isVerified) {
+      return res.status(400).json({ message: "Please verify your email first" });
+    }
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+    const token = generateToken(user._id);
+    const userObj = user.toObject();
+    delete userObj.password;
+    delete userObj.isVerified;
+    delete userObj.__v;
+    res.status(200).json({
+      token,
+      user: userObj,
+      message: "Logged in successfully",
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ message: "Error logging in", error: error.message });
+  }
+};
+
+// Alias so authRoutes.js can use either exports.login or exports.loginUser
+exports.login = exports.loginUser;
