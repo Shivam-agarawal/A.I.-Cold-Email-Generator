@@ -8,54 +8,116 @@ exports.generateEmail = async (req, res) => {
         return res.status(400).json({ message: "Prompt is required" });
     }
     try {
-        const systemPrompt = `
-            You are an expert copywriter specializing in high-converting cold outreach. 
-            Your task is to generate a complete 5-email cold outreach sequence based on the user's prompt.
+        const systemPrompt = `You are an expert job outreach strategist.
 
-            The sequence must include:
-            1. Email 1: Initial Cold Email
-            2. Email 2: First Follow-up (2-3 days later)
-            3. Email 3: Second Follow-up (3-4 days later)
-            4. Email 4: Value-Add / Resource Share (4-5 days later)
-            5. Email 5: Last Chance / Breakup (5-7 days later)
+Your task is to generate a HIGH-CONVERTING cold email to a recruiter for a job opportunity.
 
-            CRITICAL INSTRUCTIONS:
-            - Analyze the user's prompt and identify the target audience, pain points, and desired outcome.
-            - Use a friendly, professional, and conversational tone.
-            - Personalize the emails using placeholders like: {name}, {company}, {role}.
-            - Make the emails concise and easy to read (under 150 words each).
-            - Include a clear Call to Action (CTA) in each email.
-            - Focus on providing value, not just selling.
-            - Do NOT use emojis or excessive exclamation marks.
-            - Do NOT include any special formatting like bold or italics.
-            - Output ONLY the 5 emails in the following JSON format:
-              {
-                "email1": {
-                  "subject": "Subject Line",
-                  "body": "Email Body"
-                },
-                "email2": {
-                  "subject": "Subject Line",
-                  "body": "Email Body"
-                },
-                "email3": {
-                  "subject": "Subject Line",
-                  "body": "Email Body"
-                },
-                "email4": {
-                  "subject": "Subject Line",
-                  "body": "Email Body"
-                },
-                "email5": {
-                  "subject": "Subject Line",
-                  "body": "Email Body"
-                }
-              }
-            - Do not include any additional text or explanation outside the JSON object.
-            
-            User Prompt:
-        `
-        const emailHistory = await axios.post("https://api.groq.com/openai/v1/chat/completions", {
+IMPORTANT:
+- Even if the user gives only 2–4 words, assume realistic context.
+- Do NOT ask for clarification.
+- Make professional assumptions.
+- Avoid generic phrases.
+- Keep it concise and structured.
+
+====================================================
+OUTPUT FORMAT (STRICT)
+====================================================
+
+Return ONLY valid JSON:
+
+{
+  "subject": "",
+  "emailBody": "",
+  "linkedinDM": "",
+  "followUpEmail": ""
+}
+
+No markdown.
+No explanations.
+Only JSON.
+
+====================================================
+CONTEXT ASSUMPTIONS
+====================================================
+
+Assume:
+- Candidate has 2+ years experience
+- Strong in DSA and system design
+- Has worked on backend APIs or scalable systems
+- Has contributed to production-level features
+- Actively seeking Software Engineer roles
+
+If prompt is short like:
+"SDE role"
+"Backend engineer"
+"Startup job"
+"Product company"
+
+Create intelligent assumptions about:
+- Scaling challenges
+- Hiring urgency
+- Performance or system reliability issues
+- Team growth
+
+====================================================
+SUBJECT LINE RULES
+====================================================
+
+• 6–9 words
+• Must sound confident
+• No generic phrases like:
+  - "Quick question"
+  - "Looking for opportunity"
+  - "Job application"
+• Should highlight value or experience
+
+Example styles:
+"Backend engineer with 2+ yrs scaling APIs"
+"Engineer focused on scalable system design"
+"Software engineer improving system performance"
+
+====================================================
+EMAIL BODY STRUCTURE (STRICT)
+====================================================
+
+Keep 60–90 words.
+
+Line 1: Personalized observation about hiring  
+Line 2: Mention common hiring/scaling challenge  
+Line 3-4: Candidate's experience and strengths  
+Line 5: Specific impact or contribution  
+Line 6: Clear CTA  
+Line 7: Sign-off with name and title  
+
+Tone:
+• Confident
+• Professional
+• Not desperate
+• No emojis
+• No hype words
+
+====================================================
+LINKEDIN DM STRUCTURE
+====================================================
+
+30–50 words.
+Short, conversational.
+Observation + value + soft ask.
+
+====================================================
+FOLLOW-UP EMAIL STRUCTURE
+====================================================
+
+50–80 words.
+New angle.
+Emphasize long-term value.
+Professional urgency.
+Clear CTA.
+
+====================================================
+
+Return ONLY valid JSON.`;
+        const aiResponse = await axios.post("https://api.groq.com/openai/v1/chat/completions", {
             model: 'llama-3.3-70b-versatile',
             messages: [
                 { role: 'user', content: systemPrompt + "\n\nUSER PROMPT: " + prompt }
@@ -71,19 +133,37 @@ exports.generateEmail = async (req, res) => {
             timeout: 20000,
         });
 
+        const generatedEmail = aiResponse.data.choices[0].message.content;
+        const parsed = JSON.parse(generatedEmail);
+        // Handle both "linkedinDM" and "linkedInDM" casing from AI response
+        const subject = parsed.subject;
+        const emailBody = parsed.emailBody;
+        const linkedinDM = parsed.linkedinDM || parsed.linkedInDM;
+        const followUpEmail = parsed.followUpEmail;
+        const emailHistory = await EmailHistory.create({
+            user: req.user._id,
+            prompt,
+            generatedEmail,
+            subject,
+            emailBody,
+            linkedinDM,
+            followUpEmail
+        });
+        await emailHistory.save();
+        res.status(201).json({ message: "Email generated successfully", emailHistory });
+
     } catch (error) {
         console.error("Error generating email:", error);
         res.status(500).json({ message: "Error generating email", error: error.message });
     }
 }
-const { subject, emailBody, linkedinDM, followUpEmail } = JSON.parse(emailHistory.data.choices[0].message.content);
-const emailHistory = await EmailHistory.create({
-    user: req.user._id,
-    prompt,
-    subject,
-    emailBody,
-    linkedinDM,
-    followUpEmail
-})
-await emailHistory.save();
-res.status(201).json({ message: "Email generated successfully", emailHistory });
+
+exports.getHistory = async (req, res) => {
+    try {
+        const history = await EmailHistory.find({ user: req.user._id }).sort({ createdAt: -1 });
+        res.status(200).json({ history });
+    } catch (error) {
+        console.error("Error fetching email history:", error);
+        res.status(500).json({ message: "Error fetching email history", error: error.message });
+    }
+}
