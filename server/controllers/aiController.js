@@ -3,12 +3,12 @@ const EmailHistory = require("../models/EmailHistory");
 
 
 exports.generateEmail = async (req, res) => {
-    const { prompt } = req.body;
-    if (!prompt) {
-        return res.status(400).json({ message: "Prompt is required" });
-    }
-    try {
-        const systemPrompt = `You are an expert job outreach strategist.
+  const { prompt } = req.body;
+  if (!prompt) {
+    return res.status(400).json({ message: "Prompt is required" });
+  }
+  try {
+    const systemPrompt = `You are an expert job outreach strategist.
 
 Your task is to generate a HIGH-CONVERTING cold email to a recruiter for a job opportunity.
 
@@ -28,7 +28,7 @@ Return ONLY valid JSON:
 {
   "subject": "",
   "emailBody": "",
-  "linkedinDM": "",
+  "linkedInDM": "",
   "followUpEmail": ""
 }
 
@@ -117,53 +117,48 @@ Clear CTA.
 ====================================================
 
 Return ONLY valid JSON.`;
-        const aiResponse = await axios.post("https://api.groq.com/openai/v1/chat/completions", {
-            model: 'llama-3.3-70b-versatile',
-            messages: [
-                { role: 'user', content: systemPrompt + "\n\nUSER PROMPT: " + prompt }
-            ],
-            max_tokens: 1024,
-            temperature: 0.7,
-        }, {
-            headers: {
-                "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
-                "Content-Type": "application/json",
-                "accept": "application/json"
-            },
-            timeout: 20000,
-        });
+    const aiResponse = await axios.post("https://api.groq.com/openai/v1/chat/completions", {
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        { role: 'user', content: systemPrompt + "\n\nUSER PROMPT: " + prompt }
+      ],
+      max_tokens: 1024,
+      temperature: 0.7,
+    }, {
+      headers: {
+        "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
+        "Content-Type": "application/json",
+        "accept": "application/json"
+      },
+      timeout: 20000,
+    });
 
-        const generatedEmail = aiResponse.data.choices[0].message.content;
-        const parsed = JSON.parse(generatedEmail);
-        // Handle both "linkedinDM" and "linkedInDM" casing from AI response
-        const subject = parsed.subject;
-        const emailBody = parsed.emailBody;
-        const linkedinDM = parsed.linkedinDM || parsed.linkedInDM;
-        const followUpEmail = parsed.followUpEmail;
-        const emailHistory = await EmailHistory.create({
-            user: req.user._id,
-            prompt,
-            generatedEmail,
-            subject,
-            emailBody,
-            linkedinDM,
-            followUpEmail
-        });
-        await emailHistory.save();
-        res.status(201).json({ message: "Email generated successfully", emailHistory });
+    const generatedEmail = aiResponse.data.choices[0].message.content;
+    const { subject, emailBody, linkedinDM, followUpEmail } = JSON.parse(generatedEmail);
+    const emailHistory = await EmailHistory.create({
+      user: req.user._id,
+      prompt,
+      generatedEmail,
+      subject,
+      emailBody,
+      linkedinDM,
+      followUpEmail
+    });
+    await emailHistory.save();
+    res.status(201).json({ message: "Email generated successfully", emailHistory });
 
-    } catch (error) {
-        console.error("Error generating email:", error);
-        res.status(500).json({ message: "Error generating email", error: error.message });
-    }
+  } catch (error) {
+    console.error("Error generating email:", error);
+    res.status(500).json({ message: "Error generating email", error: error.message });
+  }
 }
 
 exports.getHistory = async (req, res) => {
-    try {
-        const history = await EmailHistory.find({ user: req.user._id }).sort({ createdAt: -1 });
-        res.status(200).json({ history });
-    } catch (error) {
-        console.error("Error fetching email history:", error);
-        res.status(500).json({ message: "Error fetching email history", error: error.message });
-    }
-}
+  try {
+    const emailHistory = await EmailHistory.find({ user: req.user._id });
+    res.status(200).json({ emailHistory });
+  } catch (error) {
+    console.error("Error getting history:", error);
+    res.status(500).json({ message: "Error getting history", error: error.message });
+  }
+}
