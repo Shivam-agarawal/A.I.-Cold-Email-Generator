@@ -28,7 +28,7 @@ Return ONLY valid JSON:
 {
   "subject": "",
   "emailBody": "",
-  "linkedInDM": "",
+  "linkedinDM": "",
   "followUpEmail": ""
 }
 
@@ -133,8 +133,28 @@ Return ONLY valid JSON.`;
       timeout: 20000,
     });
 
-    const generatedEmail = aiResponse.data.choices[0].message.content;
-    const { subject, emailBody, linkedinDM, followUpEmail } = JSON.parse(generatedEmail);
+    let generatedEmail = aiResponse.data.choices[0].message.content;
+    
+    // Clean up markdown code blocks if the LLM adds them despite instructions
+    if (generatedEmail.includes('```json')) {
+        generatedEmail = generatedEmail.split('```json')[1].split('```')[0].trim();
+    } else if (generatedEmail.includes('```')) {
+        generatedEmail = generatedEmail.split('```')[1].split('```')[0].trim();
+    }
+
+    let parsed = {};
+    try {
+        parsed = JSON.parse(generatedEmail);
+    } catch (e) {
+        console.error("Failed to parse JSON:", generatedEmail);
+        throw new Error("AI returned invalid JSON format");
+    }
+
+    const subject = parsed.subject || parsed.Subject || "";
+    const emailBody = parsed.emailBody || parsed.EmailBody || "";
+    const linkedinDM = parsed.linkedinDM || parsed.linkedInDM || parsed.LinkedInDM || parsed.linkedinDm || "";
+    const followUpEmail = parsed.followUpEmail || parsed.FollowUpEmail || "";
+
     const emailHistory = await EmailHistory.create({
       user: req.user._id,
       prompt,
@@ -144,8 +164,8 @@ Return ONLY valid JSON.`;
       linkedinDM,
       followUpEmail
     });
-    await emailHistory.save();
-    res.status(201).json({ message: "Email generated successfully", emailHistory });
+    
+    res.status(201).json({ message: "Email generated successfully", emailHistory, subject, emailBody, linkedinDM, followUpEmail });
 
   } catch (error) {
     console.error("Error generating email:", error);

@@ -1,14 +1,5 @@
-/* This is the index.css file for the AI Cold Email Generator */
-@tailwind base;
-
-
-/* This is for the component styles of tailwind */
-@tailwind components;
-
-
-/* This is for the utility styles of tailwind */
-@tailwind utilities;
-
+@import "tailwindcss";
+@config "../tailwind.config.js";
 
 body {
   margin: 0;
