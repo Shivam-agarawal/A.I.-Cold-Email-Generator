@@ -90,7 +90,7 @@ const Dashboard = () => {
                         <h2 className="text-lg font-semibold text-gray-800 mb-4">AI Results</h2>
                         <ResultCard title="Subject Line" content={result.subject} type="subject" />
                         <ResultCard title="Cold Email" content={result.emailBody} type="email" />
-                        <ResultCard title="LinkedIn DM" content={result.linkedInDM} type="linkedin" />
+                        <ResultCard title="LinkedIn DM" content={result.linkedinDM} type="linkedin" />
                         <ResultCard title="Follow-up Email" content={result.followUpEmail} type="followup" />
                     </div>
                 ) : (

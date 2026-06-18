@@ -19,11 +19,7 @@ const Sidebar = () => {
                     Dashboard
                 </NavLink>
             </nav>
-            <div className="p-4 border-t border-gray-200">
-                <div className="text-xs text-center text-gray-500">
-                    Built with React & MERN
-                </div>
-            </div>
+
         </div>
     );
 };

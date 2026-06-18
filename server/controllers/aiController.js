@@ -150,10 +150,20 @@ Return ONLY valid JSON.`;
         throw new Error("AI returned invalid JSON format");
     }
 
-    const subject = parsed.subject || parsed.Subject || "";
-    const emailBody = parsed.emailBody || parsed.EmailBody || "";
-    const linkedinDM = parsed.linkedinDM || parsed.linkedInDM || parsed.LinkedInDM || parsed.linkedinDm || "";
-    const followUpEmail = parsed.followUpEmail || parsed.FollowUpEmail || "";
+    const getIgnoreCase = (obj, target) => {
+        const lowerTarget = target.toLowerCase();
+        for (const k in obj) {
+            if (k.toLowerCase() === lowerTarget || k.toLowerCase().replace(/[^a-z]/g, '') === lowerTarget) {
+                return obj[k];
+            }
+        }
+        return "";
+    };
+
+    const subject = getIgnoreCase(parsed, "subject");
+    const emailBody = getIgnoreCase(parsed, "emailBody") || getIgnoreCase(parsed, "body");
+    const linkedinDM = getIgnoreCase(parsed, "linkedinDM") || getIgnoreCase(parsed, "linkedin");
+    const followUpEmail = getIgnoreCase(parsed, "followUpEmail") || getIgnoreCase(parsed, "followup");
 
     const emailHistory = await EmailHistory.create({
       user: req.user._id,
