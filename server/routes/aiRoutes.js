@@ -6,5 +6,6 @@ const aiController = require("../controllers/aiController");
 
 router.post("/generate-email", protect, aiController.generateEmail);
 router.get("/history", protect, aiController.getHistory);
+router.get("/stats", protect, aiController.getStats);
 
 module.exports = router;

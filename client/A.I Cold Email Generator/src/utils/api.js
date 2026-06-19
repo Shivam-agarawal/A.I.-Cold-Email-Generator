@@ -1,12 +1,9 @@
 import axios from 'axios';
 
-//DEPLOY:
-// const api = axios.create({
-//     baseURL: import.meta.env.VITE_API_URL || '/api',
-// });
-
 const api = axios.create({
-    baseURL: 'http://localhost:3000/api'
+    // In production, VITE_API_URL will be used (e.g. https://your-backend.onrender.com/api)
+    // In local development, it defaults to localhost:3000
+    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 });
 
 api.interceptors.request.use((config) => {

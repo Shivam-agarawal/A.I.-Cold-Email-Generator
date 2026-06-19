@@ -1,11 +1,15 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import Layout from './components/Layout';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import VerifyOtp from './pages/VerifyOtp';
-import Dashboard from './pages/Dashboard';
-import LandingPage from './pages/LandingPage';
+import Layout from './components/layout';
+import Login from './pages/login';
+import Signup from './pages/signUp';
+import VerifyOtp from './pages/verifyOTP';
+import Dashboard from './pages/dashboard';
+import History from './pages/history';
+import Analytics from './pages/analytics';
+import LandingPage from './pages/landingPage';
+import ForgotPassword from './pages/forgotPassword';
+import NotFound from './pages/notFound';
 import { useAuth } from './context/AuthContext';
 
 function App() {
@@ -21,11 +25,17 @@ function App() {
         <Route path="/login" element={!user ? <Login /> : <Navigate to="/dashboard" />} />
         <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/dashboard" />} />
         <Route path="/verify-otp" element={<VerifyOtp />} />
+        <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/dashboard" />} />
 
         {/* Protected Routes */}
         <Route path="/dashboard" element={user ? <Layout /> : <Navigate to="/login" />}>
           <Route index element={<Dashboard />} />
+          <Route path="history" element={<History />} />
+          <Route path="analytics" element={<Analytics />} />
         </Route>
+
+        {/* 404 */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
   );

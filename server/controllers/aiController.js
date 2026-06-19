@@ -3,11 +3,29 @@ const EmailHistory = require("../models/EmailHistory");
 
 
 exports.generateEmail = async (req, res) => {
-  const { prompt } = req.body;
+  const { prompt, tone, framework } = req.body;
   if (!prompt) {
     return res.status(400).json({ message: "Prompt is required" });
   }
   try {
+    // Build dynamic tone/framework instructions
+    const toneMap = {
+      professional: "Use a professional, polished tone. Sound competent and authoritative.",
+      casual: "Use a casual, friendly tone. Sound approachable and conversational.",
+      persuasive: "Use a persuasive, compelling tone. Emphasize benefits and create urgency.",
+      humorous: "Use a witty, humorous tone. Be clever but still professional.",
+      urgent: "Use an urgent, time-sensitive tone. Create a sense of immediacy.",
+    };
+
+    const frameworkMap = {
+      aida: "Structure using AIDA: Attention (hook), Interest (why it matters), Desire (benefits), Action (clear CTA).",
+      pas: "Structure using PAS: Problem (identify pain point), Agitate (make it feel urgent), Solve (present the solution).",
+      bab: "Structure using BAB: Before (current painful state), After (dream outcome), Bridge (how you get them there).",
+    };
+
+    const toneInstruction = tone && toneMap[tone] ? `\n\nTONE: ${toneMap[tone]}` : "";
+    const frameworkInstruction = framework && frameworkMap[framework] ? `\n\nFRAMEWORK: ${frameworkMap[framework]}` : "";
+
     const systemPrompt = `You are an expert job outreach strategist.
 
 Your task is to generate a HIGH-CONVERTING cold email to a recruiter for a job opportunity.
@@ -18,6 +36,7 @@ IMPORTANT:
 - Make professional assumptions.
 - Avoid generic phrases.
 - Keep it concise and structured.
+${toneInstruction}${frameworkInstruction}
 
 ====================================================
 OUTPUT FORMAT (STRICT)
@@ -88,13 +107,6 @@ Line 3-4: Candidate's experience and strengths
 Line 5: Specific impact or contribution  
 Line 6: Clear CTA  
 Line 7: Sign-off with name and title  
-
-Tone:
-• Confident
-• Professional
-• Not desperate
-• No emojis
-• No hype words
 
 ====================================================
 LINKEDIN DM STRUCTURE
@@ -172,7 +184,9 @@ Return ONLY valid JSON.`;
       subject,
       emailBody,
       linkedinDM,
-      followUpEmail
+      followUpEmail,
+      tone: tone || 'professional',
+      framework: framework || null,
     });
     
     res.status(201).json({ message: "Email generated successfully", emailHistory, subject, emailBody, linkedinDM, followUpEmail });
@@ -192,3 +206,92 @@ exports.getHistory = async (req, res) => {
     res.status(500).json({ message: "Error getting history", error: error.message });
   }
 }
+
+exports.getStats = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Total emails generated
+    const totalEmails = await EmailHistory.countDocuments({ user: userId });
+
+    // Emails per day (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const dailyData = await EmailHistory.aggregate([
+      { $match: { user: userId, createdAt: { $gte: thirtyDaysAgo } } },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    // Fill in missing days with 0
+    const emailsPerDay = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split("T")[0];
+      const found = dailyData.find((item) => item._id === dateStr);
+      emailsPerDay.push({
+        date: dateStr,
+        label: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        count: found ? found.count : 0,
+      });
+    }
+
+    // Tone distribution
+    const toneData = await EmailHistory.aggregate([
+      { $match: { user: userId } },
+      { $group: { _id: { $ifNull: ["$tone", "professional"] }, count: { $sum: 1 } } },
+    ]);
+    const toneDistribution = toneData.map((t) => ({
+      name: t._id.charAt(0).toUpperCase() + t._id.slice(1),
+      value: t.count,
+    }));
+
+    // Framework distribution
+    const frameworkData = await EmailHistory.aggregate([
+      { $match: { user: userId, framework: { $ne: null } } },
+      { $group: { _id: "$framework", count: { $sum: 1 } } },
+    ]);
+    const frameworkDistribution = frameworkData.map((f) => ({
+      name: f._id.toUpperCase(),
+      value: f.count,
+    }));
+
+    // This week vs last week
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const twoWeeksAgo = new Date();
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+
+    const thisWeek = await EmailHistory.countDocuments({
+      user: userId,
+      createdAt: { $gte: oneWeekAgo },
+    });
+    const lastWeek = await EmailHistory.countDocuments({
+      user: userId,
+      createdAt: { $gte: twoWeeksAgo, $lt: oneWeekAgo },
+    });
+
+    // Average emails per day (last 30 days)
+    const avgPerDay = totalEmails > 0 ? (emailsPerDay.reduce((s, d) => s + d.count, 0) / 30).toFixed(1) : "0";
+
+    res.status(200).json({
+      totalEmails,
+      emailsPerDay,
+      toneDistribution,
+      frameworkDistribution,
+      thisWeek,
+      lastWeek,
+      avgPerDay,
+    });
+  } catch (error) {
+    console.error("Error getting stats:", error);
+    res.status(500).json({ message: "Error getting stats", error: error.message });
+  }
+};

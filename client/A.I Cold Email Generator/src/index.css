@@ -1,6 +1,19 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
+/* Override built-in dark variant to use class-based toggle */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Base transitions for smooth theme switching */
+html {
+  color-scheme: light;
+  transition: color-scheme 0.3s;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
 body {
   margin: 0;
   font-family: 'Inter', sans-serif;
@@ -25,4 +38,13 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
 }

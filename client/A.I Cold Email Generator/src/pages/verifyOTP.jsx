@@ -39,26 +39,26 @@ const VerifyOtp = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8 transition-colors">
             <div className="sm:mx-auto sm:w-full sm:max-w-md">
-                <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Verify your email</h2>
-                <p className="mt-2 text-center text-sm text-gray-600">
-                    We sent a code to <span className="font-medium text-gray-900">{email}</span>
+                <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">Verify your email</h2>
+                <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
+                    We sent a code to <span className="font-medium text-gray-900 dark:text-white">{email}</span>
                 </p>
             </div>
 
             <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-                <div className="bg-white py-8 px-4 shadow-sm border border-gray-100 sm:rounded-xl sm:px-10">
+                <div className="bg-white dark:bg-gray-800 py-8 px-4 shadow-sm border border-gray-100 dark:border-gray-700 sm:rounded-xl sm:px-10 transition-colors">
                     <form className="space-y-6" onSubmit={handleSubmit}>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 text-center mb-2">Enter 6-digit OTP</label>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 text-center mb-2">Enter 6-digit OTP</label>
                             <input
                                 type="text"
                                 required
                                 maxLength={6}
                                 value={otp}
                                 onChange={(e) => setOtp(e.target.value)}
-                                className="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-center text-2xl tracking-widest font-mono"
+                                className="appearance-none block w-full px-3 py-3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-center text-2xl tracking-widest font-mono"
                                 placeholder="000000"
                             />
                         </div>

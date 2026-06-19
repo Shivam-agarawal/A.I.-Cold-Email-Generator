@@ -30,6 +30,16 @@ const emailHistorySchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    tone: {
+        type: String,
+        enum: ['professional', 'casual', 'persuasive', 'humorous', 'urgent'],
+        default: 'professional'
+    },
+    framework: {
+        type: String,
+        enum: ['aida', 'pas', 'bab', null],
+        default: null
+    },
 }, { timestamps: true })
 const EmailHistory = mongoose.model("EmailHistory", emailHistorySchema);
 

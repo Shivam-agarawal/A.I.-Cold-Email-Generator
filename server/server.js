@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const connectDB = require("./config/db");
+const { generalLimiter, authLimiter, aiLimiter } = require("./middleware/rateLimiter");
 
 // Load environment variables from .env file
 dotenv.config();
@@ -20,9 +21,12 @@ app.use(express.urlencoded({ extended: true })); // To parse URL-encoded data
 // Enable CORS for all routes
 app.use(cors());
 
-// Define routes
-app.use("/api/auth", authRoutes);
-app.use("/api/ai", aiRoutes);
+// Apply general rate limit to all routes
+app.use(generalLimiter);
+
+// Define routes with route-specific rate limits
+app.use("/api/auth", authLimiter, authRoutes);
+app.use("/api/ai", aiLimiter, aiRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {
